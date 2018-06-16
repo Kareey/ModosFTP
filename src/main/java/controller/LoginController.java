@@ -14,6 +14,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPClient;
+import org.w3c.dom.Text;
 
 import java.io.*;
 import java.net.URL;
@@ -71,7 +72,15 @@ public class LoginController implements Initializable {
         //Combobox setup with list of FTP-like protocols
         String[] ftpProts = new String[]{"FTP","SFTP","SCP"};
         comboProtocol.setItems(FXCollections.observableList(Arrays.asList(ftpProts)));
-            
+
+        List<TextField> inputFields = new ArrayList<>();
+        inputFields.add(tfUser);
+        inputFields.add(tfHost);
+        inputFields.add(tfPassword);
+        inputFields.add(tfPort);
+        for (TextField inputField : inputFields) {
+                inputField.textProperty().addListener((observable, oldValue, newValue) -> btnSaveSession.setDisable(false));
+        }
 
 
 
