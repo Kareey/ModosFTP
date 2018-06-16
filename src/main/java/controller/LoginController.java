@@ -2,6 +2,7 @@ package controller;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -17,6 +18,8 @@ import org.apache.commons.net.ftp.FTPClient;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LoginController implements Initializable {
     private static final String CONFIG_PATH = "/home/kareeydev/IdeaProjects/ModosFTP/src/main/resources/properties/";
@@ -25,9 +28,10 @@ public class LoginController implements Initializable {
     private ObservableList<String> sessionList;
 
 
+
     //Components
     @FXML
-    private SplitPane loginWindow;
+    private Parent loginWindow;
     @FXML
     private ListView listSession;
     @FXML
@@ -42,25 +46,55 @@ public class LoginController implements Initializable {
     private Button btnSaveSession;
     @FXML
     private TextField tfSessionName;
-    private   List<Node> children;
+    @FXML
+    private ComboBox<String> comboProtocol;
 
     private Stage primaryStage;
-    private Scene actualScene;
-
+    private Scene loginScene;
+    public LoginController() throws IOException {
+    }
 
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        loginScene = loginWindow.getScene();
         client = new FTPClient();
         List<Properties> properties = loadAllConfig(CONFIG_PATH);
         sessionList = FXCollections.observableArrayList();
+
         for (Properties property : properties) {
             sessionList.add(property.getProperty("name"));
         }
         listSession.getItems().addAll(sessionList);
 
+
+        //Combobox setup with list of FTP-like protocols
+        String[] ftpProts = new String[]{"FTP","SFTP","SCP"};
+        comboProtocol.setItems(FXCollections.observableList(Arrays.asList(ftpProts)));
+            
+
+
+
+
     }
-    public boolean login() {
+
+    private boolean checkInputFields() {
+        return tfUser.getText()!=null &&
+               tfPassword.getText()!=null &&
+               tfHost.getText()!=null &&
+               tfPassword.getText()!=null;
+    }
+
+    public boolean login() throws IOException {
+        try {
+            Thread.currentThread().sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.submit(this::loginTask);
+        executorService.shutdown();
+
         return true;
     }
 
@@ -76,7 +110,7 @@ public class LoginController implements Initializable {
         Properties prop = new Properties();
         String session = sb.toString();
         try (OutputStream out = new FileOutputStream((session))) {
-            prop.setProperty("name",sessionName);
+            prop.setProperty("name", sessionName);
             for (String s : config.keySet()) {
                 prop.setProperty(s, config.get(s));
             }
@@ -102,16 +136,16 @@ public class LoginController implements Initializable {
         return result;
     }
 
-    public List<Properties> loadAllConfig(final String DIR){
+    public List<Properties> loadAllConfig(final String DIR) {
         List<Properties> allConfig = new ArrayList<>();
         File propertiDir = new File(DIR);
-        if(propertiDir.isDirectory()){
+        if (propertiDir.isDirectory()) {
             for (File file : propertiDir.listFiles()) {
-                try(BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)))){
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
                     Properties actual = new Properties();
                     actual.load(in);
                     allConfig.add(actual);
-                }catch (IOException ex){
+                } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
@@ -133,47 +167,62 @@ public class LoginController implements Initializable {
         Properties prop = loadLoginConfig(CONFIG_PATH + actualSessionName + ".properties");
         System.out.println(prop);
         setupConfigFromInputFields(prop);
-        setupLoginInputFields(prop);
         return actualSessionName;
-    }
-
-    private void setupLoginInputFields(Properties prop) {
     }
 
 
     public void openSessionDialog(ActionEvent actionEvent) throws IOException {
-        Parent dialog =FXMLLoader.load(getClass().getClassLoader().getResource("view/session.fxml"));
-        Scene sessionScene = new Scene(dialog,360,91);
-        primaryStage = (Stage)loginWindow.getScene().getWindow();
+        Parent dialog = FXMLLoader.load(getClass().getClassLoader().getResource("view/session.fxml"));
+        Scene sessionScene = new Scene(dialog, 360, 91);
+        primaryStage = (Stage) loginWindow.getScene().getWindow();
         primaryStage.setScene(sessionScene);
         primaryStage.show();
     }
 
-    public void confirmSessionName(ActionEvent actionEvent) {
-       String sessionName = tfSessionName.getText();
-//       List<Node> textFields = setupConfigFromInputFields();
-        listSession.getItems().add(sessionName);
-       
-//       saveToProperties(CONFIG_PATH,sessionName,);
-    }
+
 
     public void setupConfigFromInputFields(Properties prop) {
         System.out.print(prop);
         for (Object key : prop.keySet()) {
             String keyStr = key.toString();
-            if(keyStr.equals("host")){
+            if (keyStr.equals("host")) {
                 tfHost.setText(prop.get(key).toString());
             }
-            if(keyStr.equals("port")){
+            if (keyStr.equals("port")) {
                 tfPort.setText(prop.get(key).toString());
             }
-            if(keyStr.equals("user")){
+            if (keyStr.equals("user")) {
                 tfUser.setText(prop.get(key).toString());
             }
-            if(keyStr.equals("password")){
+            if (keyStr.equals("password")) {
                 tfPassword.setText(prop.get(key).toString());
             }
         }
+        btnSaveSession.setDisable(true);
+    }
 
+    public void setSaveSessionBtnEnabledOnInputChange() {
+
+    }
+
+    public Scene getLoginScene() {
+        return loginScene;
+    }
+
+    public void setLoginScene(Scene loginScene) {
+        this.loginScene = loginScene;
+    }
+    public Task<Void> loginTask(){
+        System.out.println("Inside login task...");
+        return new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                String hostname = tfHost.getText();
+                int port = Integer.parseInt(tfHost.getText());
+                 client.connect(hostname,port);
+                System.out.println(client.getReplyString());
+                return null;
+            }
+        };
     }
 }

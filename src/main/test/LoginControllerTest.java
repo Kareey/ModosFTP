@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +19,7 @@ public class LoginControllerTest {
     private ByteArrayOutputStream out = new ByteArrayOutputStream();
     private ByteArrayOutputStream outErr = new ByteArrayOutputStream();
     @Before
-    public void setup(){
+    public void setup() throws IOException {
         testObj = new LoginController();
         testconfig = new HashMap<>();
         testconfig.put("host","kali");
@@ -37,7 +38,11 @@ public class LoginControllerTest {
       Properties prop = testObj.loadLoginConfig("/home/kareeydev/IdeaProjects/ModosFTP/src/main/resources/properties/test1.properties");
       testObj.setupConfigFromInputFields(prop);
       assertEquals(prop.toString(),out.toString());
-
+    }
+    @Test
+    public void testSetSaveSessionBtnEnabled(){
+        testObj.setSaveSessionBtnEnabledOnInputChange();
+       assertEquals("",out);
     }
 
 
