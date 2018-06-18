@@ -1,13 +1,12 @@
 package controller;
 
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.fxml.Initializable;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -15,20 +14,20 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
-import org.w3c.dom.Text;
 
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class LoginController implements Initializable {
+public class LoginController {
     private static final String CONFIG_PATH = "/home/kareeydev/IdeaProjects/ModosFTP/src/main/resources/properties/";
+
+    @FXML
+    public FileViewController fileViewController;
     private org.apache.commons.net.ftp.FTPClient client;
     private List<Properties> config;
     private ObservableList<String> sessionList;
-
 
 
     //Components
@@ -53,14 +52,17 @@ public class LoginController implements Initializable {
 
     private Stage primaryStage;
     private Scene loginScene;
+
     public LoginController() throws IOException {
+
     }
 
+    @FXML
+    public void initialize() {
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
+//        fileViewController.init(this);
         loginScene = loginWindow.getScene();
-        client = new FTPClient();
+        setClient(new FTPClient());
         List<Properties> properties = loadAllConfig(CONFIG_PATH);
         sessionList = FXCollections.observableArrayList();
 
@@ -69,9 +71,32 @@ public class LoginController implements Initializable {
         }
         listSession.getItems().addAll(sessionList);
 
+        listSession.setCellFactory(param -> {
+            ListCell<String> cell = new ListCell<>();
+            ContextMenu menu = new ContextMenu();
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete \"%s\"", cell.itemProperty()));
+            deleteItem.setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent event) {
+                    listSession.getItems().remove(cell.getItem());
+                    deleteFile(cell.getItem());
+                }
+            });
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(menu);
+                }
+            });
+            menu.getItems().add(deleteItem);
+            return cell;
+        });
 
         //Combobox setup with list of FTP-like protocols
-        String[] ftpProts = new String[]{"FTP","SFTP","SCP"};
+        String[] ftpProts = new String[]{"FTP", "SFTP", "SCP"};
         comboProtocol.setItems(FXCollections.observableList(Arrays.asList(ftpProts)));
 
         List<TextField> inputFields = new ArrayList<>();
@@ -80,16 +105,16 @@ public class LoginController implements Initializable {
         inputFields.add(tfPassword);
         inputFields.add(tfPort);
         for (TextField inputField : inputFields) {
-                inputField.textProperty().addListener((observable, oldValue, newValue) -> btnSaveSession.setDisable(false));
+            inputField.textProperty().addListener((observable, oldValue, newValue) -> btnSaveSession.setDisable(false));
         }
 
     }
 
     private boolean checkInputFields() {
-        return tfUser.getText()!=null &&
-               tfPassword.getText()!=null &&
-               tfHost.getText()!=null &&
-               tfPassword.getText()!=null;
+        return tfUser.getText() != null &&
+                tfPassword.getText() != null &&
+                tfHost.getText() != null &&
+                tfPassword.getText() != null;
     }
 
     public boolean login() throws IOException {
@@ -99,25 +124,29 @@ public class LoginController implements Initializable {
             e.printStackTrace();
         }
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    client.connect(tfHost.getText(),Integer.parseInt(tfPort.getText()));
-                    System.out.println(client.getReplyString());
-                    if(client.getReplyCode()>200 && client.getReplyCode()<300){
-                      if(  client.login(tfUser.getText(),tfPassword.getText())){
-                          System.out.println("Logged in");
-                          for (FTPFile ftpFile : client.listFiles()) {
-                              System.out.println(ftpFile.getName());
-                          }
-                      }
+        executorService.execute(() -> {
+            try {
+                client.connect(tfHost.getText(), Integer.parseInt(tfPort.getText()));
+                System.out.println(client.getReplyString());
+                if (client.getReplyCode() > 200 && client.getReplyCode() < 300) {
+                    if (client.login(tfUser.getText(), tfPassword.getText())) {
+                            FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("fxml/fileView.fxml"));
+                            fileViewController = loader.getController();
+                        System.out.println(fileViewController);
+//                            System.out.println("Logged in");
+//                            for (FTPFile ftpFile : client.listFiles()) {
+//                                System.out.println(ftpFile.getName());
+//                            }
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
+        Parent fileWindow = FXMLLoader.load(getClass().getClassLoader().getResource("fxml/fileView.fxml"));
+        Stage currentStage = (Stage) loginWindow.getScene().getWindow();
+        currentStage.setScene(new Scene(fileWindow));
+        currentStage.show();
         executorService.shutdown();
 
         return true;
@@ -200,33 +229,33 @@ public class LoginController implements Initializable {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.initOwner(loginWindow.getScene().getWindow());
         TextField tfSession = null;
-        try{
+        try {
             DialogPane dialogPane = new DialogPane();
             Label lbSession = new Label("Név: ");
-           tfSession = new TextField();
+            tfSession = new TextField();
             tfSession.autosize();
             dialogPane.contentProperty().setValue(tfSession);
             dialogPane.setHeader(lbSession);
             dialog.getDialogPane().setContent(dialogPane);
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
         }
         dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
         Optional<ButtonType> options = dialog.showAndWait();
-        if(options.isPresent() && options.get() == ButtonType.OK){
-            Map<String,String> config =  new HashMap<>();
-            config.put("name",tfSession.getText());
-            config.put("host",tfHost.getText());
-            config.put("port",tfPort.getText());
-            config.put("user",tfUser.getText());
-            config.put("password",tfPassword.getText());
-            saveToProperties(CONFIG_PATH,tfSession.getText(),config);
+        if (options.isPresent() && options.get() == ButtonType.OK) {
+            Map<String, String> config = new HashMap<>();
+            config.put("name", tfSession.getText());
+            config.put("host", tfHost.getText());
+            config.put("port", tfPort.getText());
+            config.put("user", tfUser.getText());
+            config.put("password", tfPassword.getText());
+            saveToProperties(CONFIG_PATH, tfSession.getText(), config);
+            listSession.getItems().add(tfSession.getText());
         }
 
     }
-
 
 
     public void setupConfigFromInputFields(Properties prop) {
@@ -249,28 +278,21 @@ public class LoginController implements Initializable {
         btnSaveSession.setDisable(true);
     }
 
-    public void setSaveSessionBtnEnabledOnInputChange() {
+    public void deleteFile(String name) {
+        File confDir = new File(CONFIG_PATH);
+        for (File file : confDir.listFiles()) {
+            if (file.getName().startsWith(name)) {
+                file.delete();
 
+            }
+        }
     }
 
-    public Scene getLoginScene() {
-        return loginScene;
+    public org.apache.commons.net.ftp.FTPClient getClient() {
+        return client;
     }
 
-    public void setLoginScene(Scene loginScene) {
-        this.loginScene = loginScene;
+    public void setClient(FTPClient client) {
+        this.client = client;
     }
-//    public Task<Void> loginTask(){
-//        System.out.println("Inside login task...");
-//        return new Task<Void>() {
-//            @Override
-//            protected Void call() throws Exception {
-//                String hostname = tfHost.getText();
-//                int port = Integer.parseInt(tfHost.getText());
-//                 client.connect(hostname,port);
-//                System.out.println(client.getReplyString());
-//                return null;
-//            }
-//        };
-//    }
 }
