@@ -9,5 +9,6 @@
         <module name="ModosFTP" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="9" />
   </component>
 </project>

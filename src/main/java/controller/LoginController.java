@@ -14,6 +14,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 import org.w3c.dom.Text;
 
 import java.io.*;
@@ -82,9 +83,6 @@ public class LoginController implements Initializable {
                 inputField.textProperty().addListener((observable, oldValue, newValue) -> btnSaveSession.setDisable(false));
         }
 
-
-
-
     }
 
     private boolean checkInputFields() {
@@ -101,7 +99,25 @@ public class LoginController implements Initializable {
             e.printStackTrace();
         }
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.submit(this::loginTask);
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    client.connect(tfHost.getText(),Integer.parseInt(tfPort.getText()));
+                    System.out.println(client.getReplyString());
+                    if(client.getReplyCode()>200 && client.getReplyCode()<300){
+                      if(  client.login(tfUser.getText(),tfPassword.getText())){
+                          System.out.println("Logged in");
+                          for (FTPFile ftpFile : client.listFiles()) {
+                              System.out.println(ftpFile.getName());
+                          }
+                      }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
         executorService.shutdown();
 
         return true;
@@ -181,11 +197,34 @@ public class LoginController implements Initializable {
 
 
     public void openSessionDialog(ActionEvent actionEvent) throws IOException {
-        Parent dialog = FXMLLoader.load(getClass().getClassLoader().getResource("view/session.fxml"));
-        Scene sessionScene = new Scene(dialog, 360, 91);
-        primaryStage = (Stage) loginWindow.getScene().getWindow();
-        primaryStage.setScene(sessionScene);
-        primaryStage.show();
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.initOwner(loginWindow.getScene().getWindow());
+        TextField tfSession = null;
+        try{
+            DialogPane dialogPane = new DialogPane();
+            Label lbSession = new Label("Név: ");
+           tfSession = new TextField();
+            tfSession.autosize();
+            dialogPane.contentProperty().setValue(tfSession);
+            dialogPane.setHeader(lbSession);
+            dialog.getDialogPane().setContent(dialogPane);
+        }catch(Exception e){
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+        }
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
+        Optional<ButtonType> options = dialog.showAndWait();
+        if(options.isPresent() && options.get() == ButtonType.OK){
+            Map<String,String> config =  new HashMap<>();
+            config.put("name",tfSession.getText());
+            config.put("host",tfHost.getText());
+            config.put("port",tfPort.getText());
+            config.put("user",tfUser.getText());
+            config.put("password",tfPassword.getText());
+            saveToProperties(CONFIG_PATH,tfSession.getText(),config);
+        }
+
     }
 
 
@@ -221,17 +260,17 @@ public class LoginController implements Initializable {
     public void setLoginScene(Scene loginScene) {
         this.loginScene = loginScene;
     }
-    public Task<Void> loginTask(){
-        System.out.println("Inside login task...");
-        return new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                String hostname = tfHost.getText();
-                int port = Integer.parseInt(tfHost.getText());
-                 client.connect(hostname,port);
-                System.out.println(client.getReplyString());
-                return null;
-            }
-        };
-    }
+//    public Task<Void> loginTask(){
+//        System.out.println("Inside login task...");
+//        return new Task<Void>() {
+//            @Override
+//            protected Void call() throws Exception {
+//                String hostname = tfHost.getText();
+//                int port = Integer.parseInt(tfHost.getText());
+//                 client.connect(hostname,port);
+//                System.out.println(client.getReplyString());
+//                return null;
+//            }
+//        };
+//    }
 }

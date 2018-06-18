@@ -1,8 +1,8 @@
+import controller.LoginController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.DialogPane;
 import javafx.stage.Stage;
 
 public class Main  extends Application {
@@ -11,7 +11,7 @@ public class Main  extends Application {
     }
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("FTP 1.0");
-        Parent root = FXMLLoader.load(getClass().getClassLoader().getResource("view/login.fxml"));
+        Parent root = FXMLLoader.load(getClass().getClassLoader().getResource("fxml/login.fxml"));
         Scene loginScene = new Scene(root,600,400);
         primaryStage.setScene(loginScene);
         primaryStage.show();
