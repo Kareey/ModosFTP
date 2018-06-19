@@ -11,7 +11,7 @@ public class Main  extends Application {
     }
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("FTP 1.0");
-        Parent root = FXMLLoader.load(getClass().getClassLoader().getResource("resources/fxml/login.fxml"));
+        Parent root = FXMLLoader.load(getClass().getClassLoader().getResource("fxml/login.fxml"));
         Scene loginScene = new Scene(root,600,400);
         primaryStage.setScene(loginScene);
         primaryStage.show();
