@@ -65,7 +65,12 @@ public class LoginController {
 
     @FXML
     public void initialize() {
-        CONFIG_PATH = System.getenv("HOME") + "/properties";
+        if(getOS().equals("Linux")){
+            CONFIG_PATH = System.getenv("HOME") + "/properties";
+        }else if (getOS().equals("Windows")){
+            CONFIG_PATH ="C:/properties";
+        }
+
 
 //        fileViewController.init(this);
 
