@@ -125,7 +125,7 @@ public class LoginController {
                 } catch (IOException io) {
                     System.out.println(client.getReplyString());
                     Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setContentText("Connection error to" + tfHost.getText());
+                    alert.setContentText("Connection error to " + tfHost.getText());
                     alert.showAndWait();
                 }
                 System.out.println(client.getReplyString());
