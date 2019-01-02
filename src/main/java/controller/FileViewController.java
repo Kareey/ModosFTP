@@ -1,11 +1,15 @@
 package controller;
 
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.control.ListView;
 import org.apache.commons.net.ftp.FTPFile;
 
-public class FileViewController{
+import java.net.URL;
+import java.util.ResourceBundle;
+
+public class FileViewController implements Initializable {
     @FXML
     Parent fileWindow;
     @FXML
@@ -13,15 +17,13 @@ public class FileViewController{
     @FXML
     ListView<FTPFile> ftpList2;
     private LoginController loginController;
+    private ResourceBundle myBundle;
+
+    //default constructor
     public FileViewController() {
-
     }
 
-    public void init(LoginController loginController) {
-        System.out.println("Hello World");
-        this.loginController = loginController;
-        System.out.println(loginController.getClient());
-    }
+
 
     @Override
     public String toString() {
@@ -29,5 +31,11 @@ public class FileViewController{
                 "fileWindow=" + fileWindow +
                 ", loginController=" + loginController +
                 '}';
+    }
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        System.out.println("HELLO WORLD!");
+        myBundle = resources;
     }
 }

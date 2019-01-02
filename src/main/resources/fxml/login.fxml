@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
@@ -15,7 +16,7 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.Pane?>
 
-<SplitPane fx:id="loginWindow" dividerPositions="0.298" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.LoginController">
+<SplitPane fx:id="loginWindow" dividerPositions="0.298" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.LoginController">
   <items>
     <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="322.0" prefWidth="174.0">
          <children>
@@ -52,9 +53,10 @@
                <padding>
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding></ComboBox>
-            <Button fx:id="btnLogin" layoutX="275.0" layoutY="365.0" mnemonicParsing="false" onAction="#login" text="Login" />
+            <Button fx:id="btnLogin" layoutX="275.0" layoutY="365.0" mnemonicParsing="false" text="Login" />
             <Button fx:id="btnExit" layoutX="343.0" layoutY="365.0" mnemonicParsing="false" text="Exit" />
             <Button fx:id="btnSaveSession" layoutX="144.0" layoutY="365.0" mnemonicParsing="false" onAction="#openSessionDialog" text="Save" />
+            <CheckBox fx:id="anonymousCB" layoutX="255.0" layoutY="241.0" mnemonicParsing="false" text="Anonymous login" onAction="#isAnonymousLogin" />
          </children></AnchorPane>
   </items>
 </SplitPane>

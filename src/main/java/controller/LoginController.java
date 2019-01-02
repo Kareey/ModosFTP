@@ -1,9 +1,9 @@
 package controller;
 
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -16,16 +16,21 @@ import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPClient;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class LoginController {
+    public final static FXMLLoader APPLOADER = new FXMLLoader();
+    public static final String PROPERTIES = "properties/";
+    static boolean logged_in = false;
     private static String CONFIG_PATH;
-
     @FXML
     public FileViewController fileViewController;
+    @FXML
+    public CheckBox anonymousCB;
+    public ResourceBundle dataFromLogin;
     private org.apache.commons.net.ftp.FTPClient client;
-
-
     //Components
     @FXML
     private Parent loginWindow;
@@ -45,10 +50,10 @@ public class LoginController {
     private TextField tfSessionName;
     @FXML
     private ComboBox<String> comboProtocol;
-
+    @FXML
+    private Button btnLogin;
     private Stage primaryStage;
     private Scene loginScene;
-    static boolean logged_in = false;
 
     public LoginController() {
 
@@ -65,17 +70,22 @@ public class LoginController {
 
     @FXML
     public void initialize() {
-        if(getOS().startsWith("Linux")){
+        if (getOS().startsWith("Linux")) {
             CONFIG_PATH = System.getenv("HOME") + "/properties";
-        }else if (getOS().startsWith("Windows")){
-            CONFIG_PATH ="C:/properties";
+        } else if (getOS().startsWith("Windows")) {
+            CONFIG_PATH = "C:/properties";
         }
-
-
-//        fileViewController.init(this);
-
         loginScene = loginWindow.getScene();
         setClient(new FTPClient());
+        btnLogin.setOnAction(event -> {
+            try {
+                System.out.println("In setOnAction! ");
+                login();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        });
         List<Properties> properties = loadAllConfig(CONFIG_PATH);
         ObservableList<String> sessionList = FXCollections.observableArrayList();
         for (Properties property : properties) {
@@ -91,8 +101,8 @@ public class LoginController {
             deleteItem.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
+                    deleteFile(cell.getItem()+".properties");
                     listSession.getItems().remove(cell.getItem());
-                    deleteFile(cell.getItem());
                 }
             });
             cell.textProperty().bind(cell.itemProperty());
@@ -110,6 +120,7 @@ public class LoginController {
         //Combobox setup with list of FTP-like protocols
         String[] ftpProts = new String[]{"FTP", "SFTP", "SCP"};
         comboProtocol.setItems(FXCollections.observableList(Arrays.asList(ftpProts)));
+        comboProtocol.getSelectionModel().selectFirst();
 
         List<TextField> inputFields = new ArrayList<>();
         inputFields.add(tfUser);
@@ -122,76 +133,101 @@ public class LoginController {
 
     }
 
+
     public boolean login() throws IOException {
-        Platform.runLater(() -> {
-            try {
+        Task loginTask = new Task() {
+            @Override
+            protected Object call() throws Exception {
                 try {
-                    client.connect(tfHost.getText(), Integer.parseInt(tfPort.getText()));
-                } catch (IOException io) {
-                    System.out.println(client.getReplyString());
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setContentText("Connection error to " + tfHost.getText());
-                    alert.showAndWait();
-                }
-                System.out.println(client.getReplyString());
-                if (client.getReplyCode() > 200 && client.getReplyCode() < 300) {
-                    if (client.login(tfUser.getText(), tfPassword.getText())) {
-                        logged_in = true;
-                        Parent fileWindow = FXMLLoader.load(getClass().getClassLoader().getResource("fxml/fileView.fxml"));
-                        Stage currentStage = (Stage) loginWindow.getScene().getWindow();
-                        currentStage.setScene(new Scene(fileWindow));
-                        currentStage.show();
+                    try {
+                        if (tfPort.getText().equals("")) {
+                            client.connect(tfHost.getText());
+                        } else {
+                            client.connect(tfHost.getText().trim(), Integer.valueOf(tfPort.getText()));
+                        }
+
+                    } catch (IOException io) {
+                        System.out.println(client.getReplyString());
+                        showError("Connection error to " + tfHost.getText());
+                    } catch (NumberFormatException nu) {
+                        showError("Wrong port number, please enter a valid port number");
                     }
+                    System.out.println(client.getReplyString());
+                    if (client.getReplyCode() > 200 && client.getReplyCode() < 300) {
+                        client.enterLocalPassiveMode();
+                        logged_in = client.login(tfUser.getText().trim(), tfPassword.getText().trim());
+                        if (logged_in) {
+                            setupNewScene(new Object[]{client});
+                            return true;
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                return false;
             }
-        });
+        };
+        loginTask.run();
+
 
         return logged_in;
     }
 
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void setupNewScene(Object[] additionalData) throws IOException {
+        File dataFile = new File(PROPERTIES + "datafile.properties");
+        Map<String, Object> dataConfig = new HashMap<>();
+        dataConfig.put("additionalData", additionalData);
+        saveToProperties(dataFile.toPath().toString(), dataConfig);
+        Parent fileWindow = APPLOADER.load(getClass().getClassLoader().getResource("fxml/fileView.fxml"));
+        fileWindow.setUserData(additionalData);
+        Stage currentStage = (Stage) loginWindow.getScene().getWindow();
+        Scene fileView = new Scene(fileWindow);
+        currentStage.setScene(fileView);
+        currentStage.show();
+    }
+
     /**
-     * @param dir         the main properties container directory
-     * @param sessionName the user defined name of the acatual session
-     * @param config      list of key-value pairs of configuration data
+     * @param filePath the user defined name of the actual session
+     * @param config   list of key-value pairs of configuration data
      */
-    public void saveToProperties(final String dir, String sessionName, Map<String, String> config) throws IOException {
-        String fileName = sessionName + ".properties";
+    public void saveToProperties(String filePath, Map<String, Object> config) throws IOException {
+        String fileName = filePath;
         Properties prop = new Properties();
-        File propertyDir = new File(dir);
-        if (!propertyDir.exists()) {
-            propertyDir.mkdir();
-            File file = new File(propertyDir.getAbsolutePath() + "/" + fileName);
-            createPropertyFile(sessionName, config, prop, file);
-
-
-        }else{
-            File file = new File(propertyDir.getAbsolutePath() + "/" + fileName);
-            createPropertyFile(sessionName, config, prop, file);
-        }
+        File file = new File(fileName);
+        createPropertyFile(null, config, prop, file);
 
     }
 
-    private void createPropertyFile(String sessionName, Map<String, String> config, Properties prop, File file) {
-        try {
-            file.createNewFile();
-            try (OutputStream out = new FileOutputStream((file))) {
-                prop.setProperty("name", sessionName);
-                if (config != null) {
-                    for (String s : config.keySet()) {
-                        prop.setProperty(s, config.get(s));
-                    }
-                }
-                prop.store(out, null);
-
-            } catch (IOException io) {
-                io.printStackTrace();
+    private void createPropertyFile(String sessionName, Map<String, Object> config, Properties prop, File file) {
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+        }
+        try (OutputStream out = new FileOutputStream((file))) {
+            if (sessionName != null) {
+                prop.setProperty("name", sessionName);
+            }
+            if (config != null) {
+                for (String s : config.keySet()) {
+                    prop.setProperty(s, (String) config.get(s));
+                }
+            }
+            prop.store(out, null);
+
         } catch (IOException io) {
             io.printStackTrace();
         }
     }
+
 
     /**
      * @param filename the file which contains the desired configuration
@@ -262,13 +298,13 @@ public class LoginController {
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
         Optional<ButtonType> options = dialog.showAndWait();
         if (options.isPresent() && options.get() == ButtonType.OK) {
-            Map<String, String> config = new HashMap<>();
+            Map<String, Object> config = new HashMap<>();
             config.put("name", tfSession.getText());
             config.put("host", tfHost.getText());
             config.put("port", tfPort.getText());
             config.put("user", tfUser.getText());
             config.put("password", tfPassword.getText());
-            saveToProperties(CONFIG_PATH, tfSession.getText(), config);
+            saveToProperties(PROPERTIES + tfSession.getText(), config);
             listSession.getItems().add(tfSession.getText());
         }
 
@@ -298,8 +334,12 @@ public class LoginController {
     public void deleteFile(String name) {
         File confDir = new File(CONFIG_PATH);
         for (File file : confDir.listFiles()) {
-            if (file.getName().startsWith(name)) {
-                file.delete();
+            if (file.getName().contains(name)) {
+                try {
+                    Files.delete(Paths.get(name));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
             }
         }
@@ -311,5 +351,13 @@ public class LoginController {
 
     public void setClient(FTPClient client) {
         this.client = client;
+    }
+
+    public void isAnonymousLogin(ActionEvent actionEvent) {
+        if (anonymousCB.isSelected()) {
+            tfUser.setText("anonymous");
+        } else {
+            tfUser.setText("");
+        }
     }
 }
