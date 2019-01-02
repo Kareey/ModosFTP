@@ -1,5 +1,6 @@
 package controller;
 
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -18,6 +19,7 @@ import org.apache.commons.net.ftp.FTPClient;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileAttribute;
 import java.util.*;
 
 public class LoginController {
@@ -86,7 +88,7 @@ public class LoginController {
             }
 
         });
-        List<Properties> properties = loadAllConfig(CONFIG_PATH);
+        List<Properties> properties = loadAllConfig(PROPERTIES);
         ObservableList<String> sessionList = FXCollections.observableArrayList();
         for (Properties property : properties) {
             sessionList.add(property.getProperty("name"));
@@ -101,7 +103,7 @@ public class LoginController {
             deleteItem.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
-                    deleteFile(cell.getItem()+".properties");
+                    deleteFile(cell.getItem() + ".properties");
                     listSession.getItems().remove(cell.getItem());
                 }
             });
@@ -197,31 +199,33 @@ public class LoginController {
      * @param config   list of key-value pairs of configuration data
      */
     public void saveToProperties(String filePath, Map<String, Object> config) throws IOException {
-        String fileName = filePath;
         Properties prop = new Properties();
-        File file = new File(fileName);
+        File file = new File(filePath);
         createPropertyFile(null, config, prop, file);
 
     }
 
-    private void createPropertyFile(String sessionName, Map<String, Object> config, Properties prop, File file) {
-        if (!file.exists()) {
+    private void createPropertyFile(final String sessionName, Map<String, Object> config, Properties prop, File file) {
+        file.mkdirs();
+        if(!file.exists()){
             try {
                 file.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        try (OutputStream out = new FileOutputStream((file))) {
+        System.out.println(file.exists());
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(file))) {
             if (sessionName != null) {
                 prop.setProperty("name", sessionName);
             }
             if (config != null) {
                 for (String s : config.keySet()) {
-                    prop.setProperty(s, (String) config.get(s));
+                    prop.setProperty(s, config.get(s).toString());
                 }
             }
             prop.store(out, null);
+
 
         } catch (IOException io) {
             io.printStackTrace();
@@ -246,9 +250,9 @@ public class LoginController {
 
     public List<Properties> loadAllConfig(final String DIR) {
         List<Properties> allConfig = new ArrayList<>();
-        File propertiDir = new File(DIR);
-        if (propertiDir.isDirectory()) {
-            for (File file : propertiDir.listFiles()) {
+        File propertyDir = new File(DIR);
+        if (propertyDir.isDirectory()) {
+            for (File file : propertyDir.listFiles()) {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
                     Properties actual = new Properties();
                     actual.load(in);
@@ -359,5 +363,9 @@ public class LoginController {
         } else {
             tfUser.setText("");
         }
+    }
+
+    public void exitApp(ActionEvent actionEvent) {
+        Platform.exit();
     }
 }

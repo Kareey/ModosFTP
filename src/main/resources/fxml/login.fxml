@@ -54,7 +54,7 @@
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding></ComboBox>
             <Button fx:id="btnLogin" layoutX="275.0" layoutY="365.0" mnemonicParsing="false" text="Login" />
-            <Button fx:id="btnExit" layoutX="343.0" layoutY="365.0" mnemonicParsing="false" text="Exit" />
+            <Button fx:id="btnExit" layoutX="343.0" layoutY="365.0" mnemonicParsing="false" text="Exit" onAction="#exitApp"/>
             <Button fx:id="btnSaveSession" layoutX="144.0" layoutY="365.0" mnemonicParsing="false" onAction="#openSessionDialog" text="Save" />
             <CheckBox fx:id="anonymousCB" layoutX="255.0" layoutY="241.0" mnemonicParsing="false" text="Anonymous login" onAction="#isAnonymousLogin" />
          </children></AnchorPane>

@@ -35,10 +35,10 @@ public class LoginControllerTest {
     }
     @Test
     public void testSaveToProperties() throws IOException {
-        String path =System.getenv("HOME")+"/properties";
-        Map<String,String> testConfig = new HashMap<>();
+        String path =LoginController.PROPERTIES+"test.properties";
+        Map<String,Object> testConfig = new HashMap<>();
         testConfig.put("name","lol");
-        testObj.saveToProperties(path,"asd",testConfig);
+        testObj.saveToProperties(path,testConfig);
 
     }
 
